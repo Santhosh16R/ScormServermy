@@ -3,69 +3,66 @@ const cors = require("cors");
 
 const app = express();
 
-// =====================================
-// ✅ PRODUCTION CORS CONFIGURATION
-// =====================================
+// ✅ CORS Config for Render & SCORM Cloud
 app.use(cors({
-    origin: "*", // Allows requests from SCORM Cloud (https://cloud.scorm.com)
+    origin: "*",
     methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true
+    allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
 app.use(express.json());
 
-// =====================================
-// SESSION STORAGE
-// Note: On Render's Free Tier, this resets if the server sleeps.
-// =====================================
-let session = {
-    status: "incomplete",
-    score: 0
-};
+// 📝 In-memory database for sessions
+// Structure: { "TOKEN123": { status: "waiting", score: 0, passed: false } }
+const sessions = new Map();
 
-// =====================================
-// ROUTES
-// =====================================
+// --- ROUTES ---
 
-// Default route to check if server is alive
-app.get("/", (req, res) => {
-    res.send("✅ SCORM Server is Live!");
-});
+// Heartbeat
+app.get("/", (req, res) => res.send("✅ VR SCORM Server is Live!"));
 
-// CREATE SESSION (Reset)
+// 1. BRIDGE: Create a new session with a unique Token
 app.post("/create-session", (req, res) => {
-    session = {
-        status: "incomplete",
-        score: 0
-    };
-    console.log("New Session Initialized");
-    res.json({ success: true, data: session });
-});
+    const { tokenId } = req.body;
+    if (!tokenId) return res.status(400).json({ error: "Token ID required" });
 
-// UNITY UPDATES STATUS
-app.post("/complete-session", (req, res) => {
-    const { score } = req.body;
+    sessions.set(tokenId, {
+        status: "waiting",
+        score: 0,
+        passed: false,
+        timestamp: new Date()
+    });
 
-    session.status = "completed";
-    session.score = score || 0;
-
-    console.log("Session Updated:", session);
+    console.log(`🆕 Session Created: ${tokenId}`);
     res.json({ success: true });
 });
 
-// SCORM CLOUD CHECKS STATUS
-app.get("/session-status", (req, res) => {
-    console.log("Status Requested:", session);
+// 2. UNITY: Update progress or Complete training
+app.post("/complete-session", (req, res) => {
+    const { tokenId, score, status } = req.body; 
+
+    if (!sessions.has(tokenId)) {
+        return res.status(404).json({ error: "Session not found" });
+    }
+
+    let session = sessions.get(tokenId);
+    
+    // Update fields
+    session.status = status || "completed"; // "progress" or "completed"
+    if (score !== undefined) session.score = score;
+    session.passed = (session.score >= 80);
+
+    console.log(`Update [${tokenId}]: Status=${session.status}, Score=${session.score}`);
+    res.json({ success: true });
+});
+
+// 3. BRIDGE: Polling for specific token
+app.get("/session-status/:tokenId", (req, res) => {
+    const session = sessions.get(req.params.tokenId);
+    if (!session) return res.status(404).json({ error: "Session Expired or Not Found" });
     res.json(session);
 });
 
-// =====================================
-// SERVER START
-// =====================================
-// Render provides the PORT environment variable automatically
+// --- START ---
 const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
