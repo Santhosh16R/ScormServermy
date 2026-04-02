@@ -1,25 +1,24 @@
 const express = require("express");
 const cors = require("cors");
-
 const app = express();
 
-// ✅ CORS Config for Render & SCORM Cloud
+// ✅ CORS Configuration for Render & SCORM Cloud
 app.use(cors({
-    origin: "*",
+    origin: "*", 
     methods: ["GET", "POST", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
 app.use(express.json());
 
-// 📝 In-memory database for sessions
-// Structure: { "TOKEN123": { status: "waiting", score: 0, passed: false } }
+// 📦 In-memory Session Storage
+// Structure: { "TOKEN123": { status: "waiting", score: 0, passed: false, customData: null } }
 const sessions = new Map();
 
 // --- ROUTES ---
 
-// Heartbeat
-app.get("/", (req, res) => res.send("✅ VR SCORM Server is Live!"));
+// Health Check
+app.get("/", (req, res) => res.send("✅ VR SCORM Server is Live and Global!"));
 
 // 1. BRIDGE: Create a new session with a unique Token
 app.post("/create-session", (req, res) => {
@@ -30,7 +29,8 @@ app.post("/create-session", (req, res) => {
         status: "waiting",
         score: 0,
         passed: false,
-        timestamp: new Date()
+        customData: null,
+        lastUpdate: new Date()
     });
 
     console.log(`🆕 Session Created: ${tokenId}`);
@@ -39,20 +39,24 @@ app.post("/create-session", (req, res) => {
 
 // 2. UNITY: Update progress or Complete training
 app.post("/complete-session", (req, res) => {
-    const { tokenId, score, status } = req.body; 
+    const { tokenId, score, status, passed, customData } = req.body; 
 
     if (!sessions.has(tokenId)) {
+        console.error(`❌ Session Not Found: ${tokenId}`);
         return res.status(404).json({ error: "Session not found" });
     }
 
     let session = sessions.get(tokenId);
     
-    // Update fields
+    // Update all fields provided by Unity
     session.status = status || "completed"; // "progress" or "completed"
     if (score !== undefined) session.score = score;
-    session.passed = (session.score >= 80);
+    if (passed !== undefined) session.passed = passed;
+    if (customData !== undefined) session.customData = customData;
+    
+    session.lastUpdate = new Date();
 
-    console.log(`Update [${tokenId}]: Status=${session.status}, Score=${session.score}`);
+    console.log(`✅ Update [${tokenId}]: Status=${session.status}, Score=${session.score}, Passed=${session.passed}`);
     res.json({ success: true });
 });
 
@@ -63,6 +67,6 @@ app.get("/session-status/:tokenId", (req, res) => {
     res.json(session);
 });
 
-// --- START ---
+// --- START SERVER ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
