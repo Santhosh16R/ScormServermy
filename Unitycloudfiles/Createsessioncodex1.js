@@ -3,7 +3,19 @@ const { DataApi } = require("@unity-services/cloud-save-1.4");
 module.exports = async ({ context, logger }) => {
   const api = new DataApi(context);
 
-  const tokenId = "TEST-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+  const projectId = context.projectId;
+  const playerId = context.playerId;
+
+  if (!projectId) {
+    throw Error("Project ID missing from Cloud Code context");
+  }
+
+  if (!playerId) {
+    throw Error("Player ID missing. Run this as an authenticated player in the sandbox.");
+  }
+
+  const tokenId =
+    "TEST-" + Math.random().toString(36).substring(2, 8).toUpperCase();
 
   const session = {
     tokenId: tokenId,
@@ -16,21 +28,20 @@ module.exports = async ({ context, logger }) => {
   };
 
   logger.info(`Creating session: ${tokenId}`);
+  logger.info(`Project ID: ${projectId}`);
+  logger.info(`Player ID: ${playerId}`);
 
-  await api.setItem({
+  await api.setItem(projectId, playerId, {
     key: tokenId,
     value: session
-  }, {
-    accessClass: "custom"
   });
 
-  const result = await api.getItem(tokenId, {
-    accessClass: "custom"
-  });
+  const result = await api.getItem(projectId, playerId, tokenId);
 
   return {
     success: true,
     tokenId: tokenId,
-    data: result.value
+    playerId: playerId,
+    data: result.data.value
   };
 };
