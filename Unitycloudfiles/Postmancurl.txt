@@ -1,0 +1,4 @@
+curl -X POST "YOUR_UNITY_CLOUD_CODE_URL" \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer YOUR_PLAYER_ACCESS_TOKEN" \
+-d "{\"tokenId\":\"ABC123\"}"

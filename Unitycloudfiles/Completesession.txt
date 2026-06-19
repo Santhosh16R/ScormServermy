@@ -1,0 +1,28 @@
+const sessions = {};
+
+module.exports = async ({ params, logger }) => {
+  const { tokenId, score, status, passed, customData } = params;
+
+  if (!tokenId) {
+    throw Error("Token ID required");
+  }
+
+  if (!sessions[tokenId]) {
+    throw Error("Invalid or expired token");
+  }
+
+  sessions[tokenId] = {
+    ...sessions[tokenId],
+    status: status || "completed",
+    score: score !== undefined ? parseFloat(score) : 0,
+    passed: passed === true,
+    customData: customData || null,
+    lastUpdate: new Date().toISOString()
+  };
+
+  logger.info(`Completed session: ${tokenId}`);
+
+  return {
+    success: true
+  };
+};

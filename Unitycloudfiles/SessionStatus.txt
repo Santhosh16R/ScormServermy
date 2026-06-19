@@ -1,0 +1,15 @@
+const sessions = {};
+
+module.exports = async ({ params }) => {
+  const { tokenId } = params;
+
+  if (!tokenId) {
+    throw Error("Token ID required");
+  }
+
+  if (!sessions[tokenId]) {
+    throw Error("Session not found");
+  }
+
+  return sessions[tokenId];
+};

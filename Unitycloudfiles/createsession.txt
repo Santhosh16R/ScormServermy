@@ -1,0 +1,24 @@
+const sessions = {};
+
+module.exports = async ({ params, logger }) => {
+  const { tokenId } = params;
+
+  if (!tokenId) {
+    throw Error("Token ID required");
+  }
+
+  sessions[tokenId] = {
+    status: "waiting",
+    score: 0,
+    passed: false,
+    customData: null,
+    lastUpdate: new Date().toISOString()
+  };
+
+  logger.info(`New session: ${tokenId}`);
+
+  return {
+    success: true,
+    tokenId
+  };
+};
