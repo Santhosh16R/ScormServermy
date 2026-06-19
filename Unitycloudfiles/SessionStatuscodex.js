@@ -12,23 +12,32 @@ module.exports = async ({ params, context, logger }) => {
   const projectId = context.projectId;
   const playerId = context.playerId;
 
+  logger.info(`Checking tokenId: ${tokenId}`);
+  logger.info(`projectId: ${projectId}`);
+  logger.info(`playerId: ${playerId}`);
+
   if (!projectId) {
     throw Error("Missing projectId");
   }
 
   if (!playerId) {
-    throw Error("Missing playerId. Run Cloud Code as an authenticated player.");
+    throw Error("Missing playerId");
   }
 
-  const result = await api.getItem(projectId, playerId, tokenId);
+  const result = await api.getItems(projectId, playerId, [tokenId]);
 
-  const session = result.value || result.data?.value || result;
+  logger.info(`Cloud Save result: ${JSON.stringify(result)}`);
 
-  if (!session || !session.tokenId) {
-    throw Error("Session not found");
+  const items =
+    result.data?.results ||
+    result.results ||
+    [];
+
+  if (!items || items.length === 0) {
+    throw Error(`Session not found for tokenId: ${tokenId}`);
   }
 
-  logger.info(`Session status checked: ${tokenId}`);
+  const session = items[0].value;
 
   return {
     success: true,
