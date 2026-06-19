@@ -11,7 +11,7 @@ module.exports = async ({ context, logger }) => {
   }
 
   if (!playerId) {
-    throw Error("Player ID missing. Run this as an authenticated player in the sandbox.");
+    throw Error("Player ID missing. Run this as an authenticated player.");
   }
 
   const tokenId =
@@ -27,21 +27,17 @@ module.exports = async ({ context, logger }) => {
     lastUpdate: new Date().toISOString()
   };
 
-  logger.info(`Creating session: ${tokenId}`);
-  logger.info(`Project ID: ${projectId}`);
-  logger.info(`Player ID: ${playerId}`);
-
   await api.setItem(projectId, playerId, {
     key: tokenId,
     value: session
   });
 
-  const result = await api.getItem(projectId, playerId, tokenId);
+  logger.info(`Session created: ${tokenId}`);
 
   return {
     success: true,
     tokenId: tokenId,
     playerId: playerId,
-    data: result.data.value
+    data: session
   };
 };
