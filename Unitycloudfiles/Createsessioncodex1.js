@@ -6,12 +6,15 @@ module.exports = async ({ context, logger }) => {
   const projectId = context.projectId;
   const playerId = context.playerId;
 
+  logger.info(`projectId = ${projectId}`);
+  logger.info(`playerId = ${playerId}`);
+
   if (!projectId) {
-    throw Error("Project ID missing from Cloud Code context");
+    throw Error("Missing projectId");
   }
 
   if (!playerId) {
-    throw Error("Player ID missing. Run this as an authenticated player.");
+    throw Error("Missing playerId. Run Cloud Code as an authenticated player.");
   }
 
   const tokenId =
@@ -37,7 +40,6 @@ module.exports = async ({ context, logger }) => {
   return {
     success: true,
     tokenId: tokenId,
-    playerId: playerId,
     data: session
   };
 };
